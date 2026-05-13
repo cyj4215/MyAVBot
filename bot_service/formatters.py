@@ -31,8 +31,6 @@ def format_actress_card(actress: dict) -> str:
     if actress.get("bust"):
         lines.append(f"  🍒 罩　　杯: {actress['bust']}")
         had_data = True
-    if actress.get("ethnicity"):
-        lines.append(f"  🧬 种　　族: {actress['ethnicity']}")
         had_data = True
     if actress.get("career_start"):
         years_active = f"{actress['career_start']} — 至今"

@@ -143,7 +143,7 @@ def _actress_summary(a: Actress) -> dict:
         "birthday": str(a.birthday) if a.birthday else None,
         "country": a.country, "height": a.height,
         "measurements": a.measurements, "bust": a.bust,
-        "ethnicity": a.ethnicity, "birthplace": a.birthplace,
+        "birthplace": a.birthplace,
         "career_start": a.career_start, "aliases": a.aliases,
         "status": a.status.value if a.status else None,
     }
