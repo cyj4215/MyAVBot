@@ -3,8 +3,13 @@ from sqlalchemy.orm import Session
 from shared.database import SessionLocal
 from shared.models import MagnetLink, MagnetCategory
 from magnet_service.search.sukebei_searcher import SukebeiSearcher
+from magnet_service.search.nyaa_searcher import NyaaSearcher
 
 router = APIRouter(prefix="/api/v1/magnet", tags=["magnet"])
+
+# Search sources
+SUKEBEI = SukebeiSearcher()
+NYAA = NyaaSearcher("https://nyaa.si", "nyaa.si")
 
 
 @router.get("/search")
@@ -16,29 +21,39 @@ async def search_magnet(
     db: Session = SessionLocal()
     try:
         cat_enum = MagnetCategory.adult_eu if category == "adult_eu" else MagnetCategory.general
-        query = (
-            db.query(MagnetLink)
-            .filter(
-                MagnetLink.category == cat_enum,
-                MagnetLink.title.ilike(f"%{q}%"),
-            )
+        query = db.query(MagnetLink).filter(
+            MagnetLink.category == cat_enum,
+            MagnetLink.title.ilike(f"%{q}%"),
         )
         total = query.count()
         cached = query.offset((page - 1) * 20).limit(20).all()
-
         if cached:
             return format_results(cached, total)
 
-        # Live search fallback
-        try:
-            searcher = SukebeiSearcher()
-            live_results = await searcher.search(q, category, page)
-        except Exception as e:
-            return {"results": [], "total": 0, "error": f"Search failed: {e}"}
+        # Live search from multiple sources
+        searchers = [SUKEBEI]
+        if category == "general":
+            searchers.append(NYAA)
 
-        # Cache results in DB
+        seen_hashes = set()
+        all_results = []
+        for searcher in searchers:
+            try:
+                results = await searcher.search(q, category, page)
+                for r in results:
+                    h = r["info_hash"]
+                    if h and h not in seen_hashes:
+                        seen_hashes.add(h)
+                        all_results.append(r)
+            except Exception:
+                continue  # one source down, try next
+
+        if not all_results:
+            return {"results": [], "total": 0}
+
+        # Cache to DB
         saved = []
-        for r in live_results:
+        for r in all_results:
             existing = db.query(MagnetLink).filter(
                 MagnetLink.info_hash == r["info_hash"]
             ).first()
@@ -46,12 +61,9 @@ async def search_magnet(
                 saved.append(existing)
                 continue
             link = MagnetLink(
-                info_hash=r["info_hash"],
-                title=r["title"],
-                file_size=r["file_size"],
-                seeders=r["seeders"],
-                leechers=r["leechers"],
-                source_site=r["source_site"],
+                info_hash=r["info_hash"], title=r["title"],
+                file_size=r["file_size"], seeders=r["seeders"],
+                leechers=r["leechers"], source_site=r["source_site"],
                 category=cat_enum,
             )
             db.add(link)
