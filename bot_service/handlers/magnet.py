@@ -20,6 +20,7 @@ async def magnet_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+
     if data.startswith("magnet_search:"):
         parts = data.split(":")
         keyword = parts[1]
@@ -32,6 +33,17 @@ async def magnet_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         lines = [format_magnet_result(m) for m in items[:10]]
         await query.edit_message_text("\n\n".join(lines), parse_mode="Markdown")
+        return
+
+    if data.startswith("magnet_actress:"):
+        actress_id = int(data.split(":")[1])
+        actress = await client.get_actress(actress_id)
+        name = actress.get("name", "")
+        await query.edit_message_text(
+            f"🔍 搜索 \"{name}\" 的磁力资源，选择范围:",
+            reply_markup=magnet_category_keyboard(name),
+        )
+        return
 
 
 magnet_handler = CommandHandler("magnet", search_magnet)

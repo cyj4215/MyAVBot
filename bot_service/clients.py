@@ -40,6 +40,13 @@ class ServiceClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def works_by_actress(self, actress_id: int):
+        resp = await self.client.get(
+            f"{settings.crawler_service_url}/api/v1/work/by-actress/{actress_id}",
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     async def search_magnet(self, keyword: str, category: str = "adult_eu"):
         resp = await self.client.get(
             f"{settings.magnet_service_url}/api/v1/magnet/search",

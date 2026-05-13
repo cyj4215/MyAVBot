@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackQueryHandler, ContextTypes
 from bot_service.clients import client
 from bot_service.formatters import format_actress_card
@@ -29,6 +29,7 @@ async def actress_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+
     if data.startswith("actress_detail:"):
         actress_id = int(data.split(":")[1])
         actress = await client.get_actress(actress_id)
@@ -44,13 +45,31 @@ async def actress_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text, parse_mode="Markdown",
             reply_markup=actress_detail_keyboard(actress_id),
         )
-    elif data.startswith("actress_works:"):
+        return
+
+    if data.startswith("actress_works:"):
         actress_id = int(data.split(":")[1])
         await query.edit_message_text("🎥 获取作品列表...")
-        works = await client.latest_works()
-        for w in works.get("results", [])[:5]:
-            text = f"🎥 {w['title']}\n📅 {w.get('release_date', 'N/A')}"
-            await query.message.reply_text(text)
+        actress = await client.get_actress(actress_id)
+        name = actress.get("name", "")
+        works = await client.works_by_actress(actress_id)
+        items = works.get("results", [])
+        if items:
+            lines = [f"🎥 *{name}* 的作品"] if name else []
+            for w in items[:10]:
+                lines.append(f"\n{w['title']}")
+                if w.get("release_date"):
+                    lines.append(f"  📅 {w['release_date']}")
+            await query.edit_message_text("\n".join(lines), parse_mode="Markdown")
+        else:
+            kb = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔍 磁力搜索", switch_inline_query_current_chat=name),
+            ]])
+            await query.edit_message_text(
+                f"😞 {name} 的作品暂未收录。\n\n点击下方按钮搜索磁力资源：",
+                reply_markup=kb,
+            )
+        return
 
 
 actress_handler = CommandHandler("actress", search_actress)
