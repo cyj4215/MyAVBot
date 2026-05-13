@@ -81,32 +81,29 @@ class IAFDParser(ActressParser):
             except Exception:
                 pass
 
-            # Extract bio fields from innerText
+            # Bio fields from innerText
             text = await page.evaluate("document.body.innerText")
             lines = [l.strip() for l in text.split("\n") if l.strip()]
             data = self._extract_fields(lines)
             data["source_url"] = url
 
-            # Extract social links from HTML (icons not visible in innerText)
+            # Social links from HTML (icons not in innerText)
             socials = await page.evaluate("""() => {
                 const results = [];
                 const seen = new Set();
                 for (const a of document.querySelectorAll('a')) {
                     const h = a.href || '';
                     if (!h.startsWith('http')) continue;
+                    if (h.includes('iafd')) continue;
                     let platform = '';
-                    if (h.includes('twitter.com')) platform = 'twitter';
-                    else if (h.includes('x.com')) platform = 'twitter';
+                    if (h.includes('twitter.com') || h.includes('x.com')) platform = 'twitter';
                     else if (h.includes('instagram.com')) platform = 'instagram';
                     else if (h.includes('onlyfans.com')) platform = 'onlyfans';
                     else if (h.includes('tiktok.com')) platform = 'tiktok';
                     else if (h.includes('facebook.com')) platform = 'facebook';
                     if (platform && !seen.has(platform)) {
                         seen.add(platform);
-                        // Filter out IAFD's own social links
-                        if (!h.includes('iafd')) {
-                            results.push({platform: platform, url: h});
-                        }
+                        results.push({platform: platform, url: h});
                     }
                 }
                 return results;
@@ -114,7 +111,6 @@ class IAFDParser(ActressParser):
 
             import json
             all_links = list(socials)
-            # Add website from text extraction if found
             if data.get("website"):
                 all_links.insert(0, {"platform": "website", "url": data.pop("website")})
             if all_links:
