@@ -1,3 +1,4 @@
+import asyncio
 from crawler_service.executors.base import CrawlerExecutor
 from shared.config import settings
 
@@ -12,10 +13,15 @@ class CloakBrowserExecutor(CrawlerExecutor):
         self._playwright = None
         self._browser = None
         self._context = None
+        self._launch_lock = asyncio.Lock()
+        self._launched = False
 
     async def fetch(self, url: str) -> str:
-        if self._context is None:
-            await self._launch()
+        if not self._launched:
+            async with self._launch_lock:
+                if not self._launched:
+                    await self._launch()
+                    self._launched = True
         page = await self._context.new_page()
         try:
             await page.goto(url, wait_until="networkidle", timeout=60000)
