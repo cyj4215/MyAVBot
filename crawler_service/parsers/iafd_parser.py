@@ -29,9 +29,57 @@ class IAFDParser(ActressParser):
     async def parse_profile(self, url: str) -> Optional[dict]:
         executor = await create_executor()
         if not hasattr(executor, '_browser') or executor._browser is None:
-            # Fallback: try HTML parsing for HttpExecutor
             return await self._parse_profile_html(executor, url)
         return await self._parse_profile_js(executor, url)
+
+    async def parse_works(self, url: str) -> list[dict]:
+        """Parse performer credits list from IAFD profile page. Returns list of works."""
+        executor = await create_executor()
+        if not hasattr(executor, '_browser') or executor._browser is None:
+            return []
+        page = await executor._context.new_page()
+        try:
+            await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            import asyncio
+            await asyncio.sleep(4)
+            text = await page.evaluate("document.body.innerText")
+            return self._extract_works(text)
+        finally:
+            await page.close()
+
+    def _extract_works(self, text: str) -> list[dict]:
+        """Parse tab-separated works table from IAFD profile text."""
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        # Find the header line
+        header_idx = None
+        for i, line in enumerate(lines):
+            if line.startswith("Movie Title\t"):
+                header_idx = i
+                break
+        if header_idx is None:
+            return []
+
+        works = []
+        for line in lines[header_idx + 1:]:
+            parts = line.split("\t")
+            if len(parts) < 3:
+                continue
+            # First part: "001 Title" or just "Title"
+            raw_title = parts[0].strip()
+            # Extract sequence number and actual title
+            seq_title = raw_title.split(" ", 1)
+            title = seq_title[1] if len(seq_title) > 1 and seq_title[0].isdigit() else raw_title
+            year_str = parts[1].strip()
+            distributor = parts[2].strip() if len(parts) > 2 else ""
+            notes = parts[3].strip() if len(parts) > 3 else ""
+            year = int(year_str) if year_str.isdigit() else None
+            works.append({
+                "title": title,
+                "year": year,
+                "distributor": distributor,
+                "notes": notes,
+            })
+        return works
 
     async def _parse_profile_js(self, executor, url: str) -> Optional[dict]:
         """Parse profile using browser evaluate for JS-rendered pages."""
@@ -90,7 +138,6 @@ class IAFDParser(ActressParser):
             key = label_map.get(line)
             if key is not None and i + 1 < len(lines):
                 val = lines[i + 1].strip()
-                # Clean up birthday to date
                 if key == "birthday":
                     import re
                     m = re.match(r"([A-Za-z]+ \d+, \d+)", val)

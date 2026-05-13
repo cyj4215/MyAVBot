@@ -49,24 +49,26 @@ async def actress_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data.startswith("actress_works:"):
         actress_id = int(data.split(":")[1])
-        await query.edit_message_text("🎥 获取作品列表...")
-        actress = await client.get_actress(actress_id)
+        await query.edit_message_text("🎥 同步作品数据...")
+        # Trigger sync + get actress name
+        actress = await client.get_actress(actress_id, sync_works=True)
         name = actress.get("name", "")
         works = await client.works_by_actress(actress_id)
         items = works.get("results", [])
         if items:
-            lines = [f"🎥 *{name}* 的作品"] if name else []
-            for w in items[:10]:
-                lines.append(f"\n{w['title']}")
+            lines = [f"🎥 *{name}* 的作品（{len(items)}）"]
+            for w in items[:20]:
+                line = f"\n🎬 {w['title']}"
                 if w.get("release_date"):
-                    lines.append(f"  📅 {w['release_date']}")
+                    line += f"\n    📅 {w['release_date']}"
+                lines.append(line)
             await query.edit_message_text("\n".join(lines), parse_mode="Markdown")
         else:
             kb = InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔍 磁力搜索", switch_inline_query_current_chat=name),
             ]])
             await query.edit_message_text(
-                f"😞 {name} 的作品暂未收录。\n\n点击下方按钮搜索磁力资源：",
+                f"😞 {name} 的作品暂未同步成功。\n\n点击下方按钮搜索磁力资源：",
                 reply_markup=kb,
             )
         return

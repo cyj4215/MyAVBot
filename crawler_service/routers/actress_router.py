@@ -1,7 +1,8 @@
+from datetime import date
 from fastapi import APIRouter, Query, HTTPException
 from sqlalchemy.orm import Session
 from shared.database import SessionLocal
-from shared.models import Actress
+from shared.models import Actress, Work
 from crawler_service.parsers.iafd_parser import IAFDParser
 
 router = APIRouter(prefix="/api/v1/actress", tags=["actress"])
@@ -18,7 +19,6 @@ async def search_actress(q: str = Query(..., min_length=1), page: int = 1, autof
         if actresses:
             return {"results": [_actress_summary(a) for a in actresses], "total": total}
 
-        # Live search IAFD
         try:
             parser = IAFDParser()
             raw = await parser.search(q)
@@ -35,7 +35,6 @@ async def search_actress(q: str = Query(..., min_length=1), page: int = 1, autof
             db.add(actress)
             db.flush()
 
-            # Auto-fill first result with full profile
             if i == 0 and autofill:
                 try:
                     profile = await parser.parse_profile(r["url"])
@@ -58,32 +57,71 @@ async def search_actress(q: str = Query(..., min_length=1), page: int = 1, autof
 
 
 @router.get("/{actress_id}")
-async def get_actress(actress_id: int):
+async def get_actress(actress_id: int, sync_works: bool = False):
     db: Session = SessionLocal()
     try:
         actress = db.query(Actress).filter(Actress.id == actress_id).first()
         if not actress:
             raise HTTPException(status_code=404, detail="Not found")
-        return _actress_detail(actress)
+        result = _actress_detail(actress)
+        if sync_works and actress.source_url:
+            existing_works = db.query(Work).filter(
+                Work.cast_ids.like(f"%{actress_id}%")
+            ).count()
+            if existing_works == 0:
+                parser = IAFDParser()
+                raw_works = await parser.parse_works(actress.source_url)
+                for w in raw_works:
+                    rel_date = date(w["year"], 1, 1) if w.get("year") else None
+                    work = Work(
+                        title=w["title"],
+                        release_date=rel_date,
+                        cast_ids=f"[{actress_id}]",
+                        description=w.get("notes", ""),
+                    )
+                    db.add(work)
+                db.commit()
+        return result
     finally:
         db.close()
 
 
-@router.post("/refresh/{actress_id}")
-async def refresh_actress(actress_id: int):
+@router.post("/{actress_id}/sync-works")
+async def sync_actress_works(actress_id: int):
+    """Fetch and save performer credits from IAFD."""
     db: Session = SessionLocal()
     try:
         actress = db.query(Actress).filter(Actress.id == actress_id).first()
         if not actress or not actress.source_url:
-            raise HTTPException(status_code=404, detail="No source URL to refresh from")
+            raise HTTPException(status_code=404, detail="Not found or no source URL")
+
         parser = IAFDParser()
-        data = await parser.parse_profile(actress.source_url)
-        if data:
-            for key, val in data.items():
-                if val is not None:
-                    setattr(actress, key, val)
-            db.commit()
-        return {"status": "refreshed"}
+        raw_works = await parser.parse_works(actress.source_url)
+
+        count = 0
+        for w in raw_works:
+            existing = db.query(Work).filter(
+                Work.title == w["title"],
+                Work.release_date is not None or True,  # broad match
+            ).filter(
+                Work.cast_ids.like(f"%{actress_id}%")
+            ).first()
+            if existing:
+                continue
+            rel_date = date(w["year"], 1, 1) if w.get("year") else None
+            work = Work(
+                title=w["title"],
+                release_date=rel_date,
+                cast_ids=f"[{actress_id}]",
+                description=w.get("notes", ""),
+            )
+            db.add(work)
+            count += 1
+
+        db.commit()
+        return {"status": "synced", "total": len(raw_works), "new": count}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Sync failed: {e}")
     finally:
         db.close()
 
