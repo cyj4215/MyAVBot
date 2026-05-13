@@ -64,8 +64,20 @@ async def get_actress(actress_id: int, sync_works: bool = False):
         if not actress:
             raise HTTPException(status_code=404, detail="Not found")
         result = _actress_detail(actress)
-        # Auto-refresh profile if cached data is incomplete
-        if actress.source_url and (not actress.birthday or not actress.social_links):
+        # Auto-refresh if missing basic fields or social_links incomplete
+        needs_refresh = not actress.birthday
+        if not needs_refresh and actress.social_links:
+            try:
+                import json
+                links = json.loads(actress.social_links) if isinstance(actress.social_links, str) else []
+                has_social = any(l.get("platform") != "website" for l in links)
+                needs_refresh = not has_social
+            except Exception:
+                needs_refresh = True
+        if not needs_refresh:
+            needs_refresh = not actress.social_links
+
+        if actress.source_url and needs_refresh:
             try:
                 parser = IAFDParser()
                 profile = await parser.parse_profile(actress.source_url)
