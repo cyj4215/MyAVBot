@@ -12,3 +12,5 @@ pydantic==2.6.1
 pydantic-settings==2.1.0
 python-dotenv==1.0.1
 cryptography==42.0.5
+cloakbrowser
+playwright
