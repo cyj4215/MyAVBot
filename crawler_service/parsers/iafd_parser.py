@@ -11,17 +11,19 @@ class IAFDParser(ActressParser):
 
     async def search(self, name: str) -> list[dict]:
         executor = await create_executor()
-        url = f"{self.BASE_URL}/person.rme/perfform=/{quote(name)}/gender=f"
+        url = f"{self.BASE_URL}/ramesearch.asp?searchtype=comprehensive&searchstring={quote(name)}"
         html = await executor.fetch(url)
         sel = Selector(text=html)
         results = []
-        for row in sel.css("table#sortabletable tr")[1:]:
-            link = row.css("a[href*='person.rme']")
-            if link:
-                results.append({
-                    "name": link.css("::text").get("").strip(),
-                    "url": self.BASE_URL + link.attrib["href"],
-                })
+        for link in sel.css("a[href*='person.rme']"):
+            href = link.attrib.get("href", "")
+            display_name = link.css("::text").get("", "").strip()
+            if not display_name or not href.startswith("person.rme"):
+                continue
+            results.append({
+                "name": display_name,
+                "url": f"{self.BASE_URL}/{href}",
+            })
         return results
 
     async def parse_profile(self, url: str) -> Optional[dict]:
