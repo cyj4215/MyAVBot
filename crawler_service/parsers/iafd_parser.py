@@ -28,16 +28,12 @@ class IAFDParser(ActressParser):
 
     async def parse_profile(self, url: str) -> Optional[dict]:
         executor = await create_executor()
-        if not hasattr(executor, '_browser') or executor._browser is None:
-            return await self._parse_profile_html(executor, url)
         return await self._parse_profile_js(executor, url)
 
     async def parse_works(self, url: str) -> list[dict]:
-        """Parse performer credits list from IAFD profile page. Returns list of works."""
+        """Parse performer credits list from IAFD profile page."""
         executor = await create_executor()
-        if not hasattr(executor, '_browser') or executor._browser is None:
-            return []
-        page = await executor._context.new_page()
+        page = await executor.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
             import asyncio
@@ -48,9 +44,7 @@ class IAFDParser(ActressParser):
             await page.close()
 
     def _extract_works(self, text: str) -> list[dict]:
-        """Parse tab-separated works table from IAFD profile text."""
         lines = [l.strip() for l in text.split("\n") if l.strip()]
-        # Find the header line
         header_idx = None
         for i, line in enumerate(lines):
             if line.startswith("Movie Title\t"):
@@ -64,9 +58,7 @@ class IAFDParser(ActressParser):
             parts = line.split("\t")
             if len(parts) < 3:
                 continue
-            # First part: "001 Title" or just "Title"
             raw_title = parts[0].strip()
-            # Extract sequence number and actual title
             seq_title = raw_title.split(" ", 1)
             title = seq_title[1] if len(seq_title) > 1 and seq_title[0].isdigit() else raw_title
             year_str = parts[1].strip()
@@ -83,7 +75,7 @@ class IAFDParser(ActressParser):
 
     async def _parse_profile_js(self, executor, url: str) -> Optional[dict]:
         """Parse profile using browser evaluate for JS-rendered pages."""
-        page = await executor._context.new_page()
+        page = await executor.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
             import asyncio
@@ -96,44 +88,15 @@ class IAFDParser(ActressParser):
         finally:
             await page.close()
 
-    async def _parse_profile_html(self, executor, url: str) -> Optional[dict]:
-        """Fallback HTML-based profile parsing for non-JS executors."""
-        html = await executor.fetch(url)
-        from parsel import Selector
-        sel = Selector(text=html)
-
-        def get_label(label: str) -> Optional[str]:
-            row = sel.xpath(f'//td[contains(text(), "{label}")]/following-sibling::td[1]')
-            return row.css("::text").get("").strip() if row else None
-
-        return {
-            "name": get_label("Name"),
-            "birthday": get_label("Birthday"),
-            "birthplace": get_label("Birthplace"),
-            "height": get_label("Height"),
-            "measurements": get_label("Measurements"),
-            "country": get_label("Country"),
-            "career_start": get_label("Career Started"),
-            "bio_text": get_label("Bio"),
-            "source_url": url,
-        }
-
     def _extract_fields(self, lines: list[str]) -> dict:
-        """Extract bio fields from text lines (key: value pattern)."""
         field_map = {}
         label_map = {
-            "BIRTHDAY": "birthday",
-            "BIRTHPLACE": "birthplace",
-            "HEIGHT": "height",
-            "WEIGHT": "weight",
-            "MEASUREMENTS": "measurements",
-            "NATIONALITY": "country",
-            "ETHNICITY": "ethnicity",
-            "YEARS ACTIVE AS PERFORMER": "career_start",
-            "HAIR COLORS": "hair_colors",
-            "EYE COLOR": "eye_color",
+            "BIRTHDAY": "birthday", "BIRTHPLACE": "birthplace",
+            "HEIGHT": "height", "WEIGHT": "weight",
+            "MEASUREMENTS": "measurements", "NATIONALITY": "country",
+            "ETHNICITY": "ethnicity", "YEARS ACTIVE AS PERFORMER": "career_start",
+            "HAIR COLORS": "hair_colors", "EYE COLOR": "eye_color",
         }
-
         for i, line in enumerate(lines):
             key = label_map.get(line)
             if key is not None and i + 1 < len(lines):

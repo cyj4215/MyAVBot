@@ -16,18 +16,30 @@ class CloakBrowserExecutor(CrawlerExecutor):
         self._launched = False
 
     async def fetch(self, url: str) -> str:
-        if not self._launched:
-            async with self._launch_lock:
-                if not self._launched:
-                    await self._launch()
-                    self._launched = True
-        page = await self._context.new_page()
+        page = await self._get_page()
         try:
             await page.goto(url, wait_until="networkidle", timeout=60000)
             content = await page.content()
             return content
         finally:
             await page.close()
+
+    async def new_page(self):
+        """Create a new browser page. Ensures browser is launched first."""
+        if not self._launched:
+            async with self._launch_lock:
+                if not self._launched:
+                    await self._launch()
+                    self._launched = True
+        return await self._context.new_page()
+
+    async def _get_page(self):
+        if not self._launched:
+            async with self._launch_lock:
+                if not self._launched:
+                    await self._launch()
+                    self._launched = True
+        return await self._context.new_page()
 
     async def _launch(self):
         import cloakbrowser
