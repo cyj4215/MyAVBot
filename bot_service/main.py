@@ -1,6 +1,6 @@
 from telegram.ext import ApplicationBuilder, Application
 from shared.config import settings
-from bot_service.handlers.start import start_handler, help_handler_cmd
+from bot_service.handlers.start import start_handler, help_handler_cmd, COMMANDS
 from bot_service.handlers.actress import actress_handler, actress_cb_handler
 from bot_service.handlers.work import work_handler, latest_handler
 from bot_service.handlers.magnet import magnet_handler, magnet_cb_handler
@@ -8,8 +8,17 @@ from bot_service.handlers.studio import studio_handler
 from bot_service.handlers.trending import trending_handler
 
 
+async def set_commands(app: Application):
+    await app.bot.set_my_commands(COMMANDS)
+
+
 def build_application() -> Application:
-    app = ApplicationBuilder().token(settings.telegram_bot_token).build()
+    app = (
+        ApplicationBuilder()
+        .token(settings.telegram_bot_token)
+        .post_init(set_commands)
+        .build()
+    )
     app.add_handler(start_handler)
     app.add_handler(help_handler_cmd)
     app.add_handler(actress_handler)
