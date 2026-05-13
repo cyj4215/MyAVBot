@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from shared.database import init_db
+from crawler_service.routers.actress_router import router as actress_router
 
 app = FastAPI(title="Crawler Service")
+app.include_router(actress_router)
 
 @app.on_event("startup")
 async def startup():

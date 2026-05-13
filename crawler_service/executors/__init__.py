@@ -1,9 +1,10 @@
+from typing import Optional
 from crawler_service.executors.base import CrawlerExecutor
 from crawler_service.executors.http_executor import HttpExecutor
 from crawler_service.executors.cloak_executor import CloakBrowserExecutor
 from shared.config import settings
 
-_executor: CrawlerExecutor | None = None
+_executor: Optional[CrawlerExecutor] = None
 
 async def create_executor() -> CrawlerExecutor:
     global _executor

@@ -1,5 +1,5 @@
 from sqlalchemy import (Column, Integer, String, Date, SmallInteger, Text,
-                        ForeignKey, Decimal, DateTime, func)
+                        ForeignKey, Numeric, DateTime, func)
 from shared.database import Base
 
 class Work(Base):
@@ -15,7 +15,7 @@ class Work(Base):
     description = Column(Text, nullable=True)
     genres = Column(Text, nullable=True)
     cast_ids = Column(Text, nullable=True)
-    rating = Column(Decimal(2, 1), nullable=True)
+    rating = Column(Numeric(2, 1), nullable=True)
     source_url = Column(String(500), nullable=True)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     created_at = Column(DateTime, server_default=func.now())
