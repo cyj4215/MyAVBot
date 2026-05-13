@@ -102,9 +102,7 @@ async def sync_actress_works(actress_id: int):
         for w in raw_works:
             existing = db.query(Work).filter(
                 Work.title == w["title"],
-                Work.release_date is not None or True,  # broad match
-            ).filter(
-                Work.cast_ids.like(f"%{actress_id}%")
+                Work.cast_ids.like(f"%{actress_id}%"),
             ).first()
             if existing:
                 continue

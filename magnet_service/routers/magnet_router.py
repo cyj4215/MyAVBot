@@ -1,14 +1,13 @@
+from __future__ import annotations
 from fastapi import APIRouter, Query, HTTPException
 from sqlalchemy.orm import Session
 from shared.database import SessionLocal
 from shared.models import MagnetLink, MagnetCategory
-from magnet_service.search.sukebei_searcher import SukebeiSearcher
 from magnet_service.search.nyaa_searcher import NyaaSearcher
 
 router = APIRouter(prefix="/api/v1/magnet", tags=["magnet"])
 
-# Search sources
-SUKEBEI = SukebeiSearcher()
+SUKEBEI = NyaaSearcher("https://sukebei.nyaa.si", "sukebei.nyaa.si")
 NYAA = NyaaSearcher("https://nyaa.si", "nyaa.si")
 
 
@@ -30,7 +29,6 @@ async def search_magnet(
         if cached:
             return format_results(cached, total)
 
-        # Live search from multiple sources
         searchers = [SUKEBEI]
         if category == "general":
             searchers.append(NYAA)
@@ -46,12 +44,11 @@ async def search_magnet(
                         seen_hashes.add(h)
                         all_results.append(r)
             except Exception:
-                continue  # one source down, try next
+                continue
 
         if not all_results:
             return {"results": [], "total": 0}
 
-        # Cache to DB
         saved = []
         for r in all_results:
             existing = db.query(MagnetLink).filter(

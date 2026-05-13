@@ -11,16 +11,14 @@ class SmartExecutor(CrawlerExecutor):
         self._cloak = None
 
     async def fetch(self, url: str) -> str:
-        # Try HTTP first
         try:
             if self._http is None:
                 self._http = HttpExecutor()
-            html = await self._http.fetch(url)
-            if len(html) > 2000 and "blocked" not in html[:500].lower():
+            status, html = await self._http.fetch_with_status(url)
+            if status < 400 and len(html) > 100:
                 return html
         except Exception:
             pass
-        # Fall back to CloakBrowser
         if self._cloak is None:
             self._cloak = CloakBrowserExecutor()
         return await self._cloak.fetch(url)

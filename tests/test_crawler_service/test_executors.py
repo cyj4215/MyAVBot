@@ -11,9 +11,10 @@ async def test_http_executor_fetch_raises_on_bad_url():
 
 
 @pytest.mark.asyncio
-async def test_http_executor_fetch_returns_string():
+async def test_http_executor_fetch_with_status():
     executor = HttpExecutor()
-    result = await executor.fetch("https://httpbin.org/html")
-    assert isinstance(result, str)
-    assert len(result) > 0
+    status, html = await executor.fetch_with_status("https://example.com")
+    assert status == 200
+    assert isinstance(html, str)
+    assert len(html) > 0
     await executor.close()

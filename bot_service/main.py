@@ -1,3 +1,4 @@
+import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, Application, CallbackQueryHandler
 from shared.config import settings
@@ -14,7 +15,6 @@ async def set_commands(app: Application):
 
 
 async def noop(update: Update, context):
-    """Silently handle noop button presses."""
     await update.callback_query.answer()
 
 

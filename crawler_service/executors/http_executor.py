@@ -1,3 +1,4 @@
+from __future__ import annotations
 import httpx
 from crawler_service.executors.base import CrawlerExecutor
 
@@ -20,6 +21,10 @@ class HttpExecutor(CrawlerExecutor):
         resp = await self.client.get(url)
         resp.raise_for_status()
         return resp.text
+
+    async def fetch_with_status(self, url: str) -> tuple[int, str]:
+        resp = await self.client.get(url)
+        return (resp.status_code, resp.text)
 
     async def close(self):
         await self.client.aclose()
