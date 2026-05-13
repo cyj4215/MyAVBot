@@ -36,8 +36,10 @@ class IAFDParser(ActressParser):
         page = await executor.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            import asyncio
-            await asyncio.sleep(4)
+            try:
+                await page.wait_for_function("document.body.innerText.includes('Movie Title')", timeout=30000)
+            except Exception:
+                pass  # timeout ok, use whatever text we have
             text = await page.evaluate("document.body.innerText")
             return self._extract_works(text)
         finally:
@@ -78,8 +80,10 @@ class IAFDParser(ActressParser):
         page = await executor.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            import asyncio
-            await asyncio.sleep(4)
+            try:
+                await page.wait_for_function("document.body.innerText.includes('BIRTHDAY')", timeout=30000)
+            except Exception:
+                pass  # timeout, use available text
             text = await page.evaluate("document.body.innerText")
             lines = [l.strip() for l in text.split("\n") if l.strip()]
             data = self._extract_fields(lines)

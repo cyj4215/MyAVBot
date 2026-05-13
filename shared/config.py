@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         return (
             f"mysql+pymysql://{self.mysql_user}:{quote_plus(self.mysql_password)}"
-            f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
+            f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}?charset=utf8mb4"
         )
 
     @property

@@ -1,9 +1,19 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Query, HTTPException
 from sqlalchemy.orm import Session
 from shared.database import SessionLocal
 from shared.models import Studio
 
 router = APIRouter(prefix="/api/v1/studio", tags=["studio"])
+
+
+@router.get("/search")
+async def search_studio(q: str = Query(..., min_length=1)):
+    db: Session = SessionLocal()
+    try:
+        studios = db.query(Studio).filter(Studio.name.ilike(f"%{q}%")).limit(20).all()
+        return {"results": [{"id": s.id, "name": s.name, "logo": s.logo} for s in studios]}
+    finally:
+        db.close()
 
 
 @router.get("/list")
