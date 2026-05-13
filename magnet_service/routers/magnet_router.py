@@ -2,6 +2,7 @@ from fastapi import APIRouter, Query, HTTPException
 from sqlalchemy.orm import Session
 from shared.database import SessionLocal
 from shared.models import MagnetLink, MagnetCategory
+from magnet_service.search.sukebei_searcher import SukebeiSearcher
 
 router = APIRouter(prefix="/api/v1/magnet", tags=["magnet"])
 
@@ -23,19 +24,42 @@ async def search_magnet(
             )
         )
         total = query.count()
-        results = query.offset((page - 1) * 20).limit(20).all()
-        return {
-            "results": [
-                {
-                    "id": m.id, "title": m.title,
-                    "info_hash": m.info_hash, "file_size": m.file_size,
-                    "seeders": m.seeders, "leechers": m.leechers,
-                    "source_site": m.source_site,
-                }
-                for m in results
-            ],
-            "total": total,
-        }
+        cached = query.offset((page - 1) * 20).limit(20).all()
+
+        if cached:
+            return format_results(cached, total)
+
+        # Live search fallback
+        try:
+            searcher = SukebeiSearcher()
+            live_results = await searcher.search(q, category, page)
+        except Exception as e:
+            return {"results": [], "total": 0, "error": f"Search failed: {e}"}
+
+        # Cache results in DB
+        saved = []
+        for r in live_results:
+            existing = db.query(MagnetLink).filter(
+                MagnetLink.info_hash == r["info_hash"]
+            ).first()
+            if existing:
+                saved.append(existing)
+                continue
+            link = MagnetLink(
+                info_hash=r["info_hash"],
+                title=r["title"],
+                file_size=r["file_size"],
+                seeders=r["seeders"],
+                leechers=r["leechers"],
+                source_site=r["source_site"],
+                category=cat_enum,
+            )
+            db.add(link)
+            db.flush()
+            saved.append(link)
+        db.commit()
+
+        return {"results": [magnet_to_dict(m) for m in saved], "total": len(saved)}
     finally:
         db.close()
 
@@ -47,13 +71,24 @@ async def get_magnet(magnet_id: int):
         magnet = db.query(MagnetLink).filter(MagnetLink.id == magnet_id).first()
         if not magnet:
             raise HTTPException(status_code=404, detail="Not found")
-        return {
-            "id": magnet.id, "title": magnet.title,
-            "info_hash": magnet.info_hash, "file_size": magnet.file_size,
-            "file_count": magnet.file_count, "source_site": magnet.source_site,
-            "work_id": magnet.work_id,
-            "category": magnet.category.value if magnet.category else None,
-            "seeders": magnet.seeders, "leechers": magnet.leechers,
-        }
+        return magnet_to_dict(magnet)
     finally:
         db.close()
+
+
+def magnet_to_dict(m: MagnetLink) -> dict:
+    return {
+        "id": m.id, "title": m.title,
+        "info_hash": m.info_hash, "file_size": m.file_size,
+        "file_count": m.file_count, "source_site": m.source_site,
+        "work_id": m.work_id,
+        "category": m.category.value if m.category else None,
+        "seeders": m.seeders, "leechers": m.leechers,
+    }
+
+
+def format_results(results: list[MagnetLink], total: int) -> dict:
+    return {
+        "results": [magnet_to_dict(m) for m in results],
+        "total": total,
+    }
