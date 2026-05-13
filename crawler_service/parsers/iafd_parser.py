@@ -63,12 +63,11 @@ class IAFDParser(ActressParser):
             seq_title = raw_title.split(" ", 1)
             title = seq_title[1] if len(seq_title) > 1 and seq_title[0].isdigit() else raw_title
             year_str = parts[1].strip()
-            distributor = parts[2].strip() if len(parts) > 2 else ""
-            notes = parts[3].strip() if len(parts) > 3 else ""
             year = int(year_str) if year_str.isdigit() else None
             works.append({
                 "title": title, "year": year,
-                "distributor": distributor, "notes": notes,
+                "distributor": parts[2].strip() if len(parts) > 2 else "",
+                "notes": parts[3].strip() if len(parts) > 3 else "",
             })
         return works
 
@@ -81,10 +80,46 @@ class IAFDParser(ActressParser):
                     "document.body.innerText.includes('BIRTHDAY')", timeout=30000)
             except Exception:
                 pass
+
+            # Extract bio fields from innerText
             text = await page.evaluate("document.body.innerText")
             lines = [l.strip() for l in text.split("\n") if l.strip()]
             data = self._extract_fields(lines)
             data["source_url"] = url
+
+            # Extract social links from HTML (icons not visible in innerText)
+            socials = await page.evaluate("""() => {
+                const results = [];
+                const seen = new Set();
+                for (const a of document.querySelectorAll('a')) {
+                    const h = a.href || '';
+                    if (!h.startsWith('http')) continue;
+                    let platform = '';
+                    if (h.includes('twitter.com')) platform = 'twitter';
+                    else if (h.includes('x.com')) platform = 'twitter';
+                    else if (h.includes('instagram.com')) platform = 'instagram';
+                    else if (h.includes('onlyfans.com')) platform = 'onlyfans';
+                    else if (h.includes('tiktok.com')) platform = 'tiktok';
+                    else if (h.includes('facebook.com')) platform = 'facebook';
+                    if (platform && !seen.has(platform)) {
+                        seen.add(platform);
+                        // Filter out IAFD's own social links
+                        if (!h.includes('iafd')) {
+                            results.push({platform: platform, url: h});
+                        }
+                    }
+                }
+                return results;
+            }""")
+
+            import json
+            all_links = list(socials)
+            # Add website from text extraction if found
+            if data.get("website"):
+                all_links.insert(0, {"platform": "website", "url": data.pop("website")})
+            if all_links:
+                data["social_links"] = json.dumps(all_links)
+
             return data
         finally:
             await page.close()
@@ -129,11 +164,4 @@ class IAFDParser(ActressParser):
                         field_map["website"] = val
                 else:
                     field_map[key] = val
-
-        # Build social_links JSON from extracted website
-        socials = []
-        if field_map.get("website"):
-            socials.append({"platform": "website", "url": field_map.pop("website")})
-        if socials:
-            field_map["social_links"] = json.dumps(socials)
         return field_map
