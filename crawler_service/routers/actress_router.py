@@ -24,8 +24,11 @@ async def search_actress(q: str = Query(..., min_length=1), page: int = 1):
                 "total": total,
             }
 
-        parser = IAFDParser()
-        results = await parser.search(q)
+        try:
+            parser = IAFDParser()
+            results = await parser.search(q)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Search failed: {e}")
         return {"results": results, "total": len(results)}
     finally:
         db.close()

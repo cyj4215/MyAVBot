@@ -15,4 +15,11 @@ async def create_executor() -> CrawlerExecutor:
             _executor = HttpExecutor()
     return _executor
 
-__all__ = ["CrawlerExecutor", "HttpExecutor", "CloakBrowserExecutor", "create_executor"]
+async def close_executor():
+    global _executor
+    if _executor is not None:
+        await _executor.close()
+        _executor = None
+
+__all__ = ["CrawlerExecutor", "HttpExecutor", "CloakBrowserExecutor",
+           "create_executor", "close_executor"]
