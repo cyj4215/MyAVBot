@@ -65,7 +65,7 @@ async def get_actress(actress_id: int, sync_works: bool = False):
             raise HTTPException(status_code=404, detail="Not found")
         result = _actress_detail(actress)
         # Auto-refresh profile if cached data is incomplete
-        if actress.source_url and not actress.birthday:
+        if actress.source_url and (not actress.birthday or not actress.social_links):
             try:
                 parser = IAFDParser()
                 profile = await parser.parse_profile(actress.source_url)
