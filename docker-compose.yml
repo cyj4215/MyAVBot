@@ -12,48 +12,59 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      retries: 5
 
   crawler-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    command: uvicorn crawler_service.main:app --host 0.0.0.0 --port 8080
     ports:
       - "8081:8080"
     env_file: .env
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - .:/app
 
   magnet-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    command: uvicorn magnet_service.main:app --host 0.0.0.0 --port 8080
     ports:
       - "8082:8080"
     env_file: .env
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - .:/app
 
   bot-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    command: python -m bot_service.main
     ports:
       - "8080:8080"
     env_file: .env
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - .:/app
 

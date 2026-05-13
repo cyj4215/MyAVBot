@@ -5,6 +5,7 @@ from bot_service.handlers.actress import actress_handler, actress_cb_handler
 from bot_service.handlers.work import work_handler, latest_handler
 from bot_service.handlers.magnet import magnet_handler, magnet_cb_handler
 from bot_service.handlers.studio import studio_handler
+from bot_service.handlers.trending import trending_handler
 
 
 def build_application() -> Application:
@@ -18,6 +19,7 @@ def build_application() -> Application:
     app.add_handler(magnet_handler)
     app.add_handler(magnet_cb_handler)
     app.add_handler(studio_handler)
+    app.add_handler(trending_handler)
     return app
 
 
