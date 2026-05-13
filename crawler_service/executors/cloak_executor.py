@@ -10,7 +10,6 @@ class CloakBrowserExecutor(CrawlerExecutor):
     """
 
     def __init__(self):
-        self._playwright = None
         self._browser = None
         self._context = None
         self._launch_lock = asyncio.Lock()
@@ -31,11 +30,11 @@ class CloakBrowserExecutor(CrawlerExecutor):
             await page.close()
 
     async def _launch(self):
-        from cloakbrowser.async_api import async_playwright  # type: ignore
+        import cloakbrowser
 
-        self._playwright = await async_playwright().start()
-        self._browser = await self._playwright.chromium.launch(
+        self._browser = await cloakbrowser.launch_async(
             headless=settings.cloakbrowser_headless,
+            locale="en-US",
         )
         self._context = await self._browser.new_context(
             viewport={"width": 1920, "height": 1080},
@@ -47,5 +46,3 @@ class CloakBrowserExecutor(CrawlerExecutor):
             await self._context.close()
         if self._browser:
             await self._browser.close()
-        if self._playwright:
-            await self._playwright.stop()
