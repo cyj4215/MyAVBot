@@ -25,9 +25,5 @@ def build_application() -> Application:
 
 if __name__ == "__main__":
     app = build_application()
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=8080,
-        url_path=settings.telegram_bot_token,
-        webhook_url=f"{settings.telegram_webhook_url}/{settings.telegram_bot_token}",
-    )
+    print("🤖 MyAVBot started in polling mode...")
+    app.run_polling()
