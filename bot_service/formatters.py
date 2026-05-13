@@ -1,38 +1,51 @@
 from __future__ import annotations
+
+
 def format_actress_card(actress: dict) -> str:
     lines = [
-        f"━━━━━━━━━━━━━━━━━━━",
+        "━━━━━━━━━━━━━━━━━━━",
         f"  🎬 *{actress['name']}*",
-        f"━━━━━━━━━━━━━━━━━━━",
+        "━━━━━━━━━━━━━━━━━━━",
     ]
+    had_data = False
     if actress.get("aliases"):
         aliases = actress["aliases"].strip("[]").replace('"', "")
         if aliases:
             lines.append(f"  🏷 别　　名: `{aliases[:60]}`")
+            had_data = True
     if actress.get("birthday"):
         lines.append(f"  📅 生　　日: {actress['birthday']}")
+        had_data = True
     if actress.get("country") or actress.get("birthplace"):
         loc = actress.get("country") or ""
         bp = actress.get("birthplace") or ""
         loc_text = f"{bp}, {loc}" if bp and loc else (bp or loc)
         lines.append(f"  🌍 国　　籍: {loc_text}")
+        had_data = True
     if actress.get("height"):
         lines.append(f"  📏 身　　高: {actress['height']} cm")
+        had_data = True
     if actress.get("measurements"):
         lines.append(f"  📐 三　　围: {actress['measurements']}")
+        had_data = True
     if actress.get("bust"):
         lines.append(f"  🍒 罩　　杯: {actress['bust']}")
+        had_data = True
     if actress.get("ethnicity"):
         lines.append(f"  🧬 种　　族: {actress['ethnicity']}")
+        had_data = True
     if actress.get("career_start"):
         years_active = f"{actress['career_start']} — 至今"
         lines.append(f"  🎬 出道年份: {years_active}")
+        had_data = True
     if actress.get("status"):
         if actress["status"] == "active":
             lines.append(f"  🟢 状　　态: `活跃中`")
         else:
             lines.append(f"  🔴 状　　态: `已退役`")
-    lines.append(f"  ───────────────────")
+        had_data = True
+    if had_data:
+        lines.append("  ───────────────────")
     return "\n".join(lines)
 
 
@@ -48,7 +61,6 @@ def format_work_card(work: dict) -> str:
         lines.append(f"  ⏱ {work['duration']}min")
     if work.get("rating"):
         rating = float(work["rating"])
-        stars = "⭐" * int(rating) + "½" if rating - int(rating) >= 0.5 else "⭐" * int(rating)
         lines.append(f"  {'⭐' * int(rating)} {rating}")
     return "\n".join(lines)
 

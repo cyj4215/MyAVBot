@@ -64,6 +64,19 @@ async def get_actress(actress_id: int, sync_works: bool = False):
         if not actress:
             raise HTTPException(status_code=404, detail="Not found")
         result = _actress_detail(actress)
+        # Auto-refresh profile if cached data is incomplete
+        if actress.source_url and not actress.birthday:
+            try:
+                parser = IAFDParser()
+                profile = await parser.parse_profile(actress.source_url)
+                if profile:
+                    for key, val in profile.items():
+                        if val is not None:
+                            setattr(actress, key, val)
+                    db.commit()
+                    result = _actress_detail(actress)
+            except Exception:
+                pass
         if sync_works and actress.source_url:
             existing_works = db.query(Work).filter(
                 Work.cast_ids.like(f"%{actress_id}%")
@@ -125,7 +138,15 @@ async def sync_actress_works(actress_id: int):
 
 
 def _actress_summary(a: Actress) -> dict:
-    return {"id": a.id, "name": a.name, "profile_image": a.profile_image}
+    return {
+        "id": a.id, "name": a.name, "profile_image": a.profile_image,
+        "birthday": str(a.birthday) if a.birthday else None,
+        "country": a.country, "height": a.height,
+        "measurements": a.measurements, "bust": a.bust,
+        "ethnicity": a.ethnicity, "birthplace": a.birthplace,
+        "career_start": a.career_start, "aliases": a.aliases,
+        "status": a.status.value if a.status else None,
+    }
 
 
 def _actress_detail(a: Actress) -> dict:
