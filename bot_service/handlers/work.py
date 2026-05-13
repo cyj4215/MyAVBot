@@ -6,20 +6,26 @@ from bot_service.formatters import format_work_card
 
 async def search_work(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("用法: /work 作品标题或编号\n例: /work VIXEN")
+        await update.message.reply_text(
+            "🎥 *MyAVBot · 作品搜索*\n\n"
+            "用法: `/work 标题`\n"
+            "例: `/work VIXEN`",
+            parse_mode="Markdown",
+        )
         return
     title = " ".join(context.args)
     try:
-        await update.message.reply_text(f"🔍 搜索 \"{title}\"...")
+        await update.message.reply_text(f"🔍 正在搜索 “{title}”...")
         data = await client.search_work(title)
         results = data.get("results", [])
     except Exception:
         await update.message.reply_text("⚠️ 搜索失败，服务暂时不可用")
         return
     if not results:
-        await update.message.reply_text("😞 没有找到结果")
+        await update.message.reply_text(f"😞 未找到 “{title}” 的相关作品")
         return
-    for r in results[:5]:
+    await update.message.reply_text(f"🎬 共找到 {len(results)} 部作品", parse_mode="Markdown")
+    for r in results[:10]:
         text = format_work_card(r)
         if r.get("cover_image"):
             await update.message.reply_photo(r["cover_image"],
@@ -34,12 +40,14 @@ async def latest_works(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data = await client.latest_works(studio_id)
         results = data.get("results", [])
     except Exception:
-        await update.message.reply_text("⚠️ 获取失败，服务暂时不可用")
+        await update.message.reply_text("⚠️ 获取最新作品失败，服务暂时不可用")
         return
     if not results:
-        await update.message.reply_text("暂无最新作品")
+        await update.message.reply_text("😞 暂无最新作品")
         return
-    for r in results[:5]:
+    label = f"片商 #{studio_id}" if studio_id else "全网"
+    await update.message.reply_text(f"🔥 *{label}最新作品*", parse_mode="Markdown")
+    for r in results[:10]:
         text = format_work_card(r)
         if r.get("cover_image"):
             await update.message.reply_photo(r["cover_image"],

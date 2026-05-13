@@ -1,4 +1,5 @@
-from telegram.ext import ApplicationBuilder, Application
+from telegram import Update
+from telegram.ext import ApplicationBuilder, Application, CallbackQueryHandler
 from shared.config import settings
 from bot_service.handlers.start import start_handler, help_handler_cmd, COMMANDS
 from bot_service.handlers.actress import actress_handler, actress_cb_handler, works_cb_handler, paginate_handler
@@ -10,6 +11,11 @@ from bot_service.handlers.trending import trending_handler
 
 async def set_commands(app: Application):
     await app.bot.set_my_commands(COMMANDS)
+
+
+async def noop(update: Update, context):
+    """Silently handle noop button presses."""
+    await update.callback_query.answer()
 
 
 def build_application() -> Application:
@@ -25,6 +31,7 @@ def build_application() -> Application:
     app.add_handler(actress_cb_handler)
     app.add_handler(works_cb_handler)
     app.add_handler(paginate_handler)
+    app.add_handler(CallbackQueryHandler(noop, pattern="^noop$"))
     app.add_handler(work_handler)
     app.add_handler(latest_handler)
     app.add_handler(magnet_handler)

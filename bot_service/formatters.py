@@ -1,43 +1,84 @@
+from __future__ import annotations
 def format_actress_card(actress: dict) -> str:
-    lines = [f"👩 *{actress['name']}*"]
+    lines = [
+        f"━━━━━━━━━━━━━━━━━━━",
+        f"  🎬 *{actress['name']}*",
+        f"━━━━━━━━━━━━━━━━━━━",
+    ]
+    if actress.get("aliases"):
+        aliases = actress["aliases"].strip("[]").replace('"', "")
+        if aliases:
+            lines.append(f"  🏷 别　　名: `{aliases[:60]}`")
     if actress.get("birthday"):
-        lines.append(f"📅 生日: {actress['birthday']}")
-    if actress.get("country"):
-        lines.append(f"🌍 国籍: {actress['country']}")
+        lines.append(f"  📅 生　　日: {actress['birthday']}")
+    if actress.get("country") or actress.get("birthplace"):
+        loc = actress.get("country") or ""
+        bp = actress.get("birthplace") or ""
+        loc_text = f"{bp}, {loc}" if bp and loc else (bp or loc)
+        lines.append(f"  🌍 国　　籍: {loc_text}")
     if actress.get("height"):
-        lines.append(f"📏 身高: {actress['height']}cm")
+        lines.append(f"  📏 身　　高: {actress['height']} cm")
     if actress.get("measurements"):
-        lines.append(f"📐 三围: {actress['measurements']}")
+        lines.append(f"  📐 三　　围: {actress['measurements']}")
+    if actress.get("bust"):
+        lines.append(f"  🍒 罩　　杯: {actress['bust']}")
+    if actress.get("ethnicity"):
+        lines.append(f"  🧬 种　　族: {actress['ethnicity']}")
     if actress.get("career_start"):
-        lines.append(f"🎬 出道: {actress['career_start']}")
+        years_active = f"{actress['career_start']} — 至今"
+        lines.append(f"  🎬 出道年份: {years_active}")
     if actress.get("status"):
-        status_emoji = "🟢" if actress["status"] == "active" else "🔴"
-        lines.append(f"{status_emoji} 状态: {'活跃' if actress['status'] == 'active' else '退役'}")
+        if actress["status"] == "active":
+            lines.append(f"  🟢 状　　态: `活跃中`")
+        else:
+            lines.append(f"  🔴 状　　态: `已退役`")
+    lines.append(f"  ───────────────────")
     return "\n".join(lines)
 
 
 def format_work_card(work: dict) -> str:
-    lines = [f"🎥 *{work['title']}*"]
+    lines = [f"🎬 *{work['title']}*"]
     if work.get("work_id"):
-        lines.append(f"🏷 编号: {work['work_id']}")
-    if work.get("release_date"):
-        lines.append(f"📅 发行: {work['release_date']}")
+        lines.append(f"  🏷 {work['work_id']}")
+    year_display = _format_year(work.get("release_date"))
+    if year_display:
+        tag = " 🔥《最新》" if year_display == "2026" else ""
+        lines.append(f"  📅 {year_display}{tag}")
     if work.get("duration"):
-        lines.append(f"⏱ 时长: {work['duration']}min")
+        lines.append(f"  ⏱ {work['duration']}min")
     if work.get("rating"):
-        stars = "⭐" * int(float(work["rating"]))
-        lines.append(f"评分: {stars} ({work['rating']})")
+        rating = float(work["rating"])
+        stars = "⭐" * int(rating) + "½" if rating - int(rating) >= 0.5 else "⭐" * int(rating)
+        lines.append(f"  {'⭐' * int(rating)} {rating}")
     return "\n".join(lines)
 
 
 def format_magnet_result(magnet: dict) -> str:
     size_str = format_size(magnet.get("file_size", 0))
+    se = magnet.get("seeders", 0)
+    le = magnet.get("leechers", 0)
+    src = magnet.get("source_site", "?")
+    hot = " 🔥" if se > 5 else ""
     return (
-        f"🔗 `{magnet['info_hash']}`\n"
-        f"📄 {magnet['title'][:80]}\n"
-        f"📦 {size_str} | ⬆ {magnet.get('seeders', 0)} | ⬇ {magnet.get('leechers', 0)}\n"
-        f"🏷 {magnet.get('source_site', 'unknown')}"
+        f"📦 *{magnet['title'][:60]}*{hot}\n"
+        f"  🔗 `{magnet['info_hash'][:20]}…`\n"
+        f"  📊 {size_str}  ⬆{se}  ⬇{le}  🏷 {src}"
     )
+
+
+def format_works_header(name: str, total: int, page: int, total_pages: int) -> str:
+    line = f"🎬 *{name}* の 作品目录"
+    line += f"\n📊 共 {total} 部 | 第 {page}/{total_pages} 页"
+    line += f"\n`{'─'*20}`"
+    return line
+
+
+def format_magnet_header(keyword: str, total: int, page: int, total_pages: int) -> str:
+    cat = "adult_eu"
+    line = f"🔍 *“{keyword}”* 磁力搜索结果"
+    line += f"\n📊 共 {total} 条 | 第 {page}/{total_pages} 页"
+    line += f"\n`{'─'*20}`"
+    return line
 
 
 def format_size(size_bytes: int) -> str:
@@ -46,3 +87,9 @@ def format_size(size_bytes: int) -> str:
             return f"{size_bytes:.1f}{unit}"
         size_bytes /= 1024
     return f"{size_bytes:.1f}PB"
+
+
+def _format_year(date_str: str | None) -> str:
+    if not date_str:
+        return ""
+    return date_str[:4]
