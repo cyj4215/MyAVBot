@@ -145,6 +145,7 @@ def _actress_summary(a: Actress) -> dict:
         "measurements": a.measurements, "bust": a.bust,
         "birthplace": a.birthplace,
         "career_start": a.career_start, "aliases": a.aliases,
+        "social_links": a.social_links,
         "status": a.status.value if a.status else None,
     }
 

@@ -1,4 +1,20 @@
 from __future__ import annotations
+import json
+
+
+def _social_icon(url: str) -> str:
+    lower = url.lower()
+    if "twitter.com" in lower or "x.com" in lower:
+        return "🐦"
+    if "instagram.com" in lower:
+        return "📸"
+    if "onlyfans.com" in lower:
+        return "🔞"
+    if "facebook.com" in lower:
+        return "👤"
+    if "youtube.com" in lower or "youtu.be" in lower:
+        return "▶️"
+    return "🌐"
 
 
 def format_actress_card(actress: dict) -> str:
@@ -31,7 +47,6 @@ def format_actress_card(actress: dict) -> str:
     if actress.get("bust"):
         lines.append(f"  🍒 罩　　杯: {actress['bust']}")
         had_data = True
-        had_data = True
     if actress.get("career_start"):
         years_active = f"{actress['career_start']} — 至今"
         lines.append(f"  🎬 出道年份: {years_active}")
@@ -44,6 +59,22 @@ def format_actress_card(actress: dict) -> str:
         had_data = True
     if had_data:
         lines.append("  ───────────────────")
+
+    # Social links
+    social_raw = actress.get("social_links")
+    if social_raw:
+        try:
+            links = json.loads(social_raw) if isinstance(social_raw, str) else social_raw
+            if links:
+                lines.append("  🔗 *社交链接*")
+                for link in links:
+                    url = link.get("url", "")
+                    if url:
+                        icon = _social_icon(url)
+                        lines.append(f"  {icon} `{url}`")
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     return "\n".join(lines)
 
 
@@ -77,18 +108,11 @@ def format_magnet_result(magnet: dict) -> str:
 
 
 def format_works_header(name: str, total: int, page: int, total_pages: int) -> str:
-    line = f"🎬 *{name}* の 作品目录"
-    line += f"\n📊 共 {total} 部 | 第 {page}/{total_pages} 页"
-    line += f"\n`{'─'*20}`"
-    return line
+    return f"🎬 *{name}* の 作品目录\n📊 共 {total} 部 | 第 {page}/{total_pages} 页\n`{'─'*20}`"
 
 
 def format_magnet_header(keyword: str, total: int, page: int, total_pages: int) -> str:
-    cat = "adult_eu"
-    line = f"🔍 *“{keyword}”* 磁力搜索结果"
-    line += f"\n📊 共 {total} 条 | 第 {page}/{total_pages} 页"
-    line += f"\n`{'─'*20}`"
-    return line
+    return f"🔍 *“{keyword}”* 磁力搜索结果\n📊 共 {total} 条 | 第 {page}/{total_pages} 页\n`{'─'*20}`"
 
 
 def format_size(size_bytes: int) -> str:

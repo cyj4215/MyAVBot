@@ -31,15 +31,15 @@ class IAFDParser(ActressParser):
         return await self._parse_profile_js(executor, url)
 
     async def parse_works(self, url: str) -> list[dict]:
-        """Parse performer credits list from IAFD profile page."""
         executor = await create_executor()
         page = await executor.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
             try:
-                await page.wait_for_function("document.body.innerText.includes('Movie Title')", timeout=30000)
+                await page.wait_for_function(
+                    "document.body.innerText.includes('Movie Title')", timeout=30000)
             except Exception:
-                pass  # timeout ok, use whatever text we have
+                pass
             text = await page.evaluate("document.body.innerText")
             return self._extract_works(text)
         finally:
@@ -54,7 +54,6 @@ class IAFDParser(ActressParser):
                 break
         if header_idx is None:
             return []
-
         works = []
         for line in lines[header_idx + 1:]:
             parts = line.split("\t")
@@ -68,22 +67,20 @@ class IAFDParser(ActressParser):
             notes = parts[3].strip() if len(parts) > 3 else ""
             year = int(year_str) if year_str.isdigit() else None
             works.append({
-                "title": title,
-                "year": year,
-                "distributor": distributor,
-                "notes": notes,
+                "title": title, "year": year,
+                "distributor": distributor, "notes": notes,
             })
         return works
 
     async def _parse_profile_js(self, executor, url: str) -> Optional[dict]:
-        """Parse profile using browser evaluate for JS-rendered pages."""
         page = await executor.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
             try:
-                await page.wait_for_function("document.body.innerText.includes('BIRTHDAY')", timeout=30000)
+                await page.wait_for_function(
+                    "document.body.innerText.includes('BIRTHDAY')", timeout=30000)
             except Exception:
-                pass  # timeout, use available text
+                pass
             text = await page.evaluate("document.body.innerText")
             lines = [l.strip() for l in text.split("\n") if l.strip()]
             data = self._extract_fields(lines)
@@ -93,6 +90,7 @@ class IAFDParser(ActressParser):
             await page.close()
 
     def _extract_fields(self, lines: list[str]) -> dict:
+        import json
         field_map = {}
         label_map = {
             "BIRTHDAY": "birthday", "BIRTHPLACE": "birthplace",
@@ -100,6 +98,7 @@ class IAFDParser(ActressParser):
             "MEASUREMENTS": "measurements", "NATIONALITY": "country",
             "ETHNICITY": "ethnicity", "YEARS ACTIVE AS PERFORMER": "career_start",
             "HAIR COLORS": "hair_colors", "EYE COLOR": "eye_color",
+            "WEBSITE": "website",
         }
         for i, line in enumerate(lines):
             key = label_map.get(line)
@@ -125,6 +124,16 @@ class IAFDParser(ActressParser):
                     import re
                     m = re.match(r"(\d{4})", val)
                     field_map[key] = int(m.group(1)) if m else val
+                elif key == "website":
+                    if val.startswith("http"):
+                        field_map["website"] = val
                 else:
                     field_map[key] = val
+
+        # Build social_links JSON from extracted website
+        socials = []
+        if field_map.get("website"):
+            socials.append({"platform": "website", "url": field_map.pop("website")})
+        if socials:
+            field_map["social_links"] = json.dumps(socials)
         return field_map
