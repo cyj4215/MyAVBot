@@ -1,7 +1,6 @@
 from telegram import Update, BotCommand
 from telegram.ext import CommandHandler, ContextTypes
 
-
 COMMANDS = [
     BotCommand("actress", "搜索女优资料"),
     BotCommand("work", "搜索作品"),
@@ -23,7 +22,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔗 磁力搜索 — 按关键词搜磁力，支持欧美/通用双模式\n"
         "🏢 片商信息 — 制作公司资料\n\n"
         "*数据来源*\n"
-        "• IAFD 女优资料库\n"
+        "• IAFD 女优资料库 + 作品表\n"
         "• 磁力索引站实时搜索\n"
         "• CloakBrowser 反爬技术支持\n\n"
         "输入 /help 查看完整命令列表，或直接输入命令开始使用。",
@@ -45,7 +44,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "   可选按片商筛选\n\n"
         "🏢 `/studio <name>` — 片商信息\n\n"
         "🔥 `/trending` — 热门内容\n\n"
-        "🎬 `/new` — 近期新人\n\n"
         "💡 提示: 在女优搜索结果中点击按钮可查看详情、作品、磁力",
         parse_mode="Markdown",
     )

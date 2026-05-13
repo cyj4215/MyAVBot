@@ -5,10 +5,14 @@ from bot_service.clients import client
 
 async def search_studio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("用法: /studio 片商名称")
+        await update.message.reply_text("用法: /studio 片商名称\n例: /studio VIXEN")
         return
     name = " ".join(context.args)
-    results = await client.search_studio(name)
+    try:
+        results = await client.search_studio(name)
+    except Exception:
+        await update.message.reply_text("⚠️ 查询失败，服务暂时不可用")
+        return
     if not results:
         await update.message.reply_text("😞 没有找到该片商")
         return

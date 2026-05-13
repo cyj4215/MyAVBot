@@ -6,10 +6,10 @@ class ServiceClient:
     def __init__(self):
         self.client = httpx.AsyncClient(timeout=60.0)
 
-    async def search_actress(self, name: str):
+    async def search_actress(self, name: str, page: int = 1):
         resp = await self.client.get(
             f"{settings.crawler_service_url}/api/v1/actress/search",
-            params={"q": name},
+            params={"q": name, "page": page},
         )
         resp.raise_for_status()
         return resp.json()
@@ -49,10 +49,10 @@ class ServiceClient:
         resp.raise_for_status()
         return resp.json()
 
-    async def search_magnet(self, keyword: str, category: str = "adult_eu"):
+    async def search_magnet(self, keyword: str, category: str = "adult_eu", page: int = 1):
         resp = await self.client.get(
             f"{settings.magnet_service_url}/api/v1/magnet/search",
-            params={"q": keyword, "category": category},
+            params={"q": keyword, "category": category, "page": page},
         )
         resp.raise_for_status()
         return resp.json()
