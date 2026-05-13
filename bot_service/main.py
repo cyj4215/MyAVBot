@@ -1,7 +1,7 @@
 from telegram.ext import ApplicationBuilder, Application
 from shared.config import settings
 from bot_service.handlers.start import start_handler, help_handler_cmd, COMMANDS
-from bot_service.handlers.actress import actress_handler, actress_cb_handler
+from bot_service.handlers.actress import actress_handler, actress_cb_handler, works_cb_handler, paginate_handler
 from bot_service.handlers.work import work_handler, latest_handler
 from bot_service.handlers.magnet import magnet_handler, magnet_cb_handler
 from bot_service.handlers.studio import studio_handler
@@ -23,6 +23,8 @@ def build_application() -> Application:
     app.add_handler(help_handler_cmd)
     app.add_handler(actress_handler)
     app.add_handler(actress_cb_handler)
+    app.add_handler(works_cb_handler)
+    app.add_handler(paginate_handler)
     app.add_handler(work_handler)
     app.add_handler(latest_handler)
     app.add_handler(magnet_handler)
