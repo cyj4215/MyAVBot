@@ -59,7 +59,7 @@ async def latest_works(studio: int = None, page: int = 1):
         query = db.query(Work)
         if studio:
             query = query.filter(Work.studio_id == studio)
-        query = query.order_by(Work.release_date.desc().nullslast())
+        query = query.order_by(Work.release_date.desc())
         works = query.offset((page - 1) * 20).limit(20).all()
         return {
             "results": [
@@ -83,7 +83,7 @@ async def works_by_actress(actress_id: int):
         works = (
             db.query(Work)
             .filter(Work.cast_ids.like(f"%{actress_id}%"))
-            .order_by(Work.release_date.desc().nullslast())
+            .order_by(Work.release_date.desc())
             .limit(50)
             .all()
         )
